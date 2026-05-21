@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Denní report — Rekonstrukce Vrána</title>
+<style>
+  :root {
+    color-scheme: light;
+    --gold: #f0a500; --dark: #111; --bg: #f4f3ef; --card: #fff;
+    --border: #e8e5de; --muted: #888;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--dark); font-size: 14px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+  .header { background: var(--dark); padding: 0 24px; display: flex; align-items: center; justify-content: space-between; min-height: 54px; }
+  .logo { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; color: #fff; }
+  .logo-mark { width: 28px; height: 28px; background: var(--gold); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 900; color: var(--dark); }
+  .date-pill { background: #222; color: #aaa; font-size: 12px; padding: 4px 12px; border-radius: 20px; border: 1px solid #333; }
+
+  .page { max-width: 700px; margin: 0 auto; padding: 24px 18px 60px; }
+  .greeting-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .greeting-text { font-size: 22px; font-weight: 800; letter-spacing: -.4px; }
+  .greeting-sub { font-size: 13px; color: var(--muted); }
+
+  .pbox { background: var(--dark); border-radius: 14px; padding: 18px 20px; margin-bottom: 26px; position: relative; overflow: hidden; }
+  .pbox::after { content: ''; position: absolute; top: -40px; right: -40px; width: 130px; height: 130px; background: var(--gold); opacity: .06; border-radius: 50%; pointer-events: none; }
+  .pbox-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--gold); margin-bottom: 12px; }
+  .prow { display: flex; align-items: flex-start; gap: 11px; padding: 7px 0; border-bottom: 1px solid #1e1e1e; color: #ddd; font-size: 13.5px; line-height: 1.5; }
+  .prow:last-child { border-bottom: none; padding-bottom: 0; }
+  .pnum { background: var(--gold); color: var(--dark); font-weight: 800; font-size: 10px; min-width: 21px; height: 21px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+
+  .section { margin-bottom: 22px; }
+  .sec-head { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; }
+  .sec-emoji { font-size: 16px; }
+  .sec-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; flex: 1; }
+  .sec-count { font-size: 11px; font-weight: 700; color: var(--muted); background: var(--border); padding: 2px 8px; border-radius: 10px; }
+  .sec-divider { height: 2px; background: var(--dark); border-radius: 2px; margin-bottom: 2px; }
+
+  .entry { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px 12px 17px; margin-top: 7px; position: relative; }
+  .entry-bar { position: absolute; left: 0; top: 11px; bottom: 11px; width: 3px; border-radius: 0 2px 2px 0; }
+  .bar-red    { background: #dc2626; }
+  .bar-orange { background: #ea580c; }
+  .bar-yellow { background: #d97706; }
+  .bar-green  { background: #16a34a; }
+  .bar-blue   { background: #2563eb; }
+  .bar-grey   { background: #bbb; }
+
+  .entry-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 3px; flex-wrap: wrap; }
+  .entry-name { font-weight: 700; font-size: 14px; }
+  .entry-subject { font-size: 12.5px; color: #555; margin-top: 1px; }
+  .entry-desc { font-size: 13px; color: #666; margin-top: 4px; line-height: 1.55; }
+
+  .tag { display: inline-flex; align-items: center; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; }
+  .tag-red    { background: #fff1f1; color: #dc2626; }
+  .tag-orange { background: #fff7ed; color: #c2410c; }
+  .tag-yellow { background: #fefce8; color: #92400e; }
+  .tag-green  { background: #f0fdf4; color: #15803d; }
+  .tag-blue   { background: #eff6ff; color: #1d4ed8; }
+  .tag-grey   { background: #f5f5f4; color: #777; }
+
+  .empty-sec { border: 1px dashed var(--border); border-radius: 10px; padding: 11px 15px; color: #ccc; font-size: 13px; font-style: italic; margin-top: 7px; }
+  .footer { text-align: center; font-size: 12px; color: #ccc; padding-top: 18px; border-top: 1px solid var(--border); margin-top: 8px; }
+
+  /* Poznámky */
+  .note-wrap { margin-top: 10px; border-top: 1px dashed var(--border); padding-top: 8px; }
+  .note-header { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: #bbb; margin-bottom: 5px; user-select: none; }
+  .note-textarea { width: 100%; min-height: 38px; resize: none; border: 1.5px solid var(--border); border-radius: 8px; padding: 8px 11px; font-size: 13px; font-family: inherit; color: var(--dark); background: #f9f8f5; line-height: 1.55; outline: none; transition: border-color .2s, background .2s; overflow: hidden; }
+  .note-textarea:focus { border-color: var(--gold); background: #fffef9; min-height: 68px; box-shadow: 0 0 0 3px rgba(240,165,0,.08); }
+  .note-textarea.has-value { background: #fffdf0; border-color: #e8d88a; color: #333; }
+  .note-footer { display: flex; align-items: center; justify-content: space-between; min-height: 20px; margin-top: 5px; gap: 8px; }
+  .note-saved { font-size: 11px; color: transparent; transition: color .3s; }
+  .note-saved.show { color: #16a34a; }
+  .note-send { display: inline-flex; align-items: center; gap: 5px; background: var(--dark); color: #fff; border: none; border-radius: 7px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap; flex-shrink: 0; transition: background .15s; }
+  .note-send:hover { background: #333; }
+
+  /* Vyřešeno */
+  .entry.resolved { opacity: .42; }
+  .entry.resolved .entry-name { text-decoration: line-through; }
+  .entry.resolved .entry-bar { background: #ccc !important; }
+  .resolved-badge { display: none; font-size: 11px; font-weight: 700; color: #16a34a; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 20px; padding: 2px 9px; }
+  .entry.resolved .resolved-badge { display: inline-flex; align-items: center; gap: 4px; }
+  .btn-resolve { background: none; border: 1.5px solid var(--border); border-radius: 7px; padding: 4px 10px; font-size: 12px; font-weight: 600; color: #888; cursor: pointer; font-family: inherit; transition: all .15s; white-space: nowrap; margin-top: 8px; display: inline-block; }
+  .btn-resolve:hover { border-color: #16a34a; color: #16a34a; background: #f0fdf4; }
+  .entry.resolved .btn-resolve { border-color: #16a34a; color: #16a34a; background: #f0fdf4; }
+  .toggle-resolved { background: none; border: 1.5px solid var(--border); border-radius: 20px; padding: 5px 14px; font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; font-family: inherit; transition: all .15s; margin-bottom: 18px; }
+  .toggle-resolved:hover { border-color: var(--dark); color: var(--dark); }
+
+  /* Modal */
+  .prompt-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 999; align-items: center; justify-content: center; padding: 20px; }
+  .prompt-modal.open { display: flex; }
+  .prompt-box { background: #fff; border-radius: 16px; padding: 24px; width: 100%; max-width: 520px; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+  .prompt-box-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 12px; }
+  .prompt-box-text { width: 100%; min-height: 100px; border: 1.5px solid var(--border); border-radius: 10px; padding: 12px; font-size: 13.5px; font-family: inherit; color: var(--dark); background: #fafaf8; resize: vertical; outline: none; line-height: 1.6; }
+  .prompt-box-text:focus { border-color: var(--gold); }
+  .prompt-box-actions { display: flex; gap: 10px; margin-top: 14px; }
+  .btn-copy { flex: 1; background: var(--dark); color: #fff; border: none; border-radius: 10px; padding: 11px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; transition: background .15s; }
+  .btn-copy:hover { background: #333; }
+  .btn-copy.copied { background: #16a34a; }
+  .btn-claude { flex: 1; background: var(--gold); color: var(--dark); border: none; border-radius: 10px; padding: 11px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; }
+  .btn-claude:hover { background: #e09400; }
+  .btn-cancel { background: none; border: 1.5px solid var(--border); border-radius: 10px; padding: 11px 16px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; color: var(--muted); }
+
+  /* Plovoucí chat */
+  .chat-fab { position: fixed; bottom: 24px; right: 24px; z-index: 500; }
+  .chat-bubble { width: 52px; height: 52px; background: var(--gold); border-radius: 50%; border: none; cursor: pointer; font-size: 22px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(0,0,0,.18); transition: transform .15s; }
+  .chat-bubble:hover { transform: scale(1.08); }
+  .chat-panel { display: none; flex-direction: column; background: #fff; border-radius: 16px; box-shadow: 0 8px 40px rgba(0,0,0,.18); width: 320px; overflow: hidden; margin-bottom: 12px; border: 1px solid var(--border); }
+  .chat-panel.open { display: flex; }
+  .chat-panel-header { background: var(--dark); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; }
+  .chat-panel-title { color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 7px; }
+  .chat-panel-title span { color: var(--gold); }
+  .chat-close { background: none; border: none; color: #888; font-size: 18px; cursor: pointer; padding: 0 2px; }
+  .chat-close:hover { color: #fff; }
+  .chat-input-wrap { padding: 12px; }
+  .chat-textarea { width: 100%; min-height: 80px; max-height: 160px; resize: none; border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 13.5px; font-family: inherit; outline: none; line-height: 1.55; transition: border-color .2s; }
+  .chat-textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(240,165,0,.08); }
+  .chat-send { width: 100%; margin-top: 8px; background: var(--gold); color: var(--dark); border: none; border-radius: 10px; padding: 10px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; }
+  .chat-send:hover { background: #e09400; }
+  .chat-hint { font-size: 11px; color: #bbb; text-align: center; margin-top: 6px; }
+
+  /* Historie */
+  .history-section { margin-top: 32px; }
+  .history-day { margin-top: 14px; }
+  .history-day-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+  .history-day-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .history-entry { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 13px; margin-top: 5px; display: flex; gap: 10px; align-items: flex-start; }
+  .history-body { flex: 1; }
+  .history-name { font-size: 12px; font-weight: 700; color: #555; margin-bottom: 2px; }
+  .history-note { font-size: 13px; color: var(--dark); line-height: 1.5; }
+  .history-time { font-size: 11px; color: #ccc; margin-left: auto; white-space: nowrap; }
+  .history-empty { font-size: 13px; color: #ccc; font-style: italic; padding: 10px 0; }
+
+  .loading { text-align: center; padding: 40px; color: #ccc; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <div class="logo-mark">V</div>
+    Rekonstrukce Vrána
+  </div>
+  <div class="date-pill" id="datePill">načítám…</div>
+</div>
+
+<div class="page">
+  <div class="greeting-row">
+    <div class="greeting-text">Dobré ráno 👋</div>
+    <div class="greeting-sub" id="greetingSub">Ranní přehled emailů</div>
+  </div>
+
+  <button class="toggle-resolved" id="toggleResolved" onclick="toggleResolved()">👁 Zobrazit vyřešené</button>
+
+  <div id="priorityBox" class="loading">Načítám data…</div>
+  <div id="sectionsContainer"></div>
+
+  <div class="history-section section">
+    <div class="sec-head">
+      <span class="sec-emoji">📅</span>
+      <span class="sec-title">Co se řešilo — posledních 7 dní</span>
+    </div>
+    <div class="sec-divider"></div>
+    <div id="historyContainer"><div class="history-empty">Načítám historii…</div></div>
+  </div>
+
+  <div class="footer">Generováno automaticky z info@rekovrana.cz · Rekonstrukce Vrána s.r.o.</div>
+</div>
+
+<!-- PLOVOUCÍ CHAT -->
+<div class="chat-fab">
+  <div class="chat-panel" id="chatPanel">
+    <div class="chat-panel-header">
+      <div class="chat-panel-title"><span>✦</span> Zeptat se Claudy</div>
+      <button class="chat-close" onclick="toggleChat()">✕</button>
+    </div>
+    <div class="chat-input-wrap">
+      <textarea class="chat-textarea" id="chatInput" placeholder="Co chceš řešit? Napiš libovolný dotaz…" rows="4"></textarea>
+      <button class="chat-send" onclick="sendChatPrompt()">Poslat Claudovi ↗</button>
+      <div class="chat-hint">Otevře Claude s kontextem dashboardu</div>
+    </div>
+  </div>
+  <button class="chat-bubble" onclick="toggleChat()" title="Zeptat se Claudy">✦</button>
+</div>
+
+<!-- PROMPT MODAL -->
+<div class="prompt-modal" id="promptModal">
+  <div class="prompt-box">
+    <div class="prompt-box-title">📋 Prompt pro Claudu</div>
+    <textarea class="prompt-box-text" id="promptText" rows="5"></textarea>
+    <div class="prompt-box-actions">
+      <button class="btn-copy" id="btnCopy" onclick="copyPrompt()">📋 Zkopírovat</button>
+      <button class="btn-claude" onclick="openClaude()">Otevřít Claude ↗</button>
+      <button class="btn-cancel" onclick="closeModal()">✕</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Inline data (aktualizuje scheduled task — NEMĚNIT RUČNĚ) ─────────────
+// CONTENT_DATA_START
+var CONTENT_DATA = {"generatedAt":"2026-05-21 10:15","dateLabel":"středa 21. 5. 2026","priorities":[{"text":"📅 ZÍTRA 22.5. v 9:30 — kontrolní návštěva Bednářová, Za Mototechnou P5 (Stodůlky)"},{"text":"📅 ZÍTRA 22.5. do 12h — obhlídka malování, Janco (Vokovice) — potvrdit čas"},{"text":"💬 Odpovědět Bauer Moskevská — klient akceptoval vícepráce, chce pomoct s vynášením"},{"text":"💬 DS Podlahy (Šimon) — neví m² a neumí tabulku, odpovědět s m²"},{"text":"📦 Vyzvednout Hornbach RA9048121752 + AlzaBox 597096512"}],"sections":[{"id":"zakaznici","emoji":"👷","title":"Zákazníci — aktivní zakázky","entries":[{"id":"bauer_moskevska","name":"Bauer — Moskevská 23","subject":"Vícepráce CN20250142/3 — akceptováno","desc":"Klient akceptoval rozpočet víceprací. V mailu 20.5. píše, že celková výše ho překvapila, ale souhlasí. Zároveň prosí o pomoc s vynášením. Odpovědět k vynášení.","bar":"orange","tagColor":"orange","tagText":"🟠 odpovědět"},{"id":"kozak_dolina","name":"Kozák — V Dolině 1515/1b","subject":"CN20250183 — klient hledá úspory 100k","desc":"Klient dostal dvě revize úspor (20.5.). Odpověděl, že to proberou s manželkou a dal do kopie Interium Pro. Čekat na odpověď Interium + klienta.","bar":"orange","tagColor":"orange","tagText":"🟠 čeká klient"},{"id":"bednarova_stodulky","name":"Bednářová — Za Mototechnou P5","subject":"Kontrolní návštěva ZÍTRA 22.5. v 9:30","desc":"Reklamační/kontrolní obhlídka po rekonstrukci ve Stodůlkách. Potvrzeno 9:30. NEZAPOMENOUT.","bar":"red","tagColor":"red","tagText":"🔴 ZÍTRA 9:30"},{"id":"sasek_machuldova","name":"Šašek — Machuldova 595/8","subject":"CN20260053 — odesláno 20.5., bez odpovědi","desc":"Orientační CN odeslána 20.5. večer. Zatím žádná reakce. Followup za 2-3 dny.","bar":"green","tagColor":"green","tagText":"🟢 čerstvé"},{"id":"skola_eu_mottl","name":"Škola EU — Mottl","subject":"Objednávka CN20260091 — čeká na podpis ředitele","desc":"Mottl 18.5. napsal, že objednávku předal k podpisu řediteli. Žádná další zpráva. Followup.","bar":"yellow","tagColor":"yellow","tagText":"🟡 čeká podpis"},{"id":"kuchyne_knezek","name":"Kněžek (kuchyně) — Kozák","subject":"Odpověď na dotazy ke spotřebičům — dnes 9:00","desc":"Kněžek dnes ráno odpověděl na dotazy ke spotřebičům (montáž, baterie, světlo nad ostrůvkem). Přeposlat odpovědi klientovi Kozákovi.","bar":"red","tagColor":"red","tagText":"🔴 přeposlat klientovi"}]},{"id":"nabidky","emoji":"📋","title":"Naše nabídky — čekáme na odpověď","entries":[{"id":"poptavka_p15","name":"Macháčková — panelák Praha 15","subject":"Poptávka kompletní rekonstrukce — Milánská","desc":"Nová poptávka dnes 21.5. ráno — orientační kalkulace kompletní rekonstrukce paneláku P15 (bez obkladů a podlah). Ještě nezodpovězeno.","bar":"green","tagColor":"green","tagText":"🟢 nová poptávka"},{"id":"janco_malovani","name":"Janco — malování 2+1","subject":"Chce obhlídku ZÍTRA 22.5. do 12h","desc":"Poptávka malování 2 místnosti + chodba + oskrabání 1 místnosti. Prosí o návštěvu 22.5. do 12h. Potvrdit nebo navrhnout čas.","bar":"red","tagColor":"red","tagText":"🔴 ZÍTRA do 12h"},{"id":"pekarkova_flowbox","name":"Pekárková — Flowbox (Vestec)","subject":"Malování kanceláří 3× (19+47+60 m²)","desc":"Poptávka výmalby kanceláří ve Vestci (Praha-západ), 18.5. Bez odpovědi.","bar":"orange","tagColor":"orange","tagText":"🟠 3 dny bez odp."},{"id":"hynarova_rudna","name":"Hynarová — Rudná u Prahy","subject":"Poptávka malování — Hořelické náměstí","desc":"Web poptávka 17.5. Bez odpovědi.","bar":"orange","tagColor":"orange","tagText":"🟠 4 dny bez odp."},{"id":"burianova_luzicka","name":"Burianová — Lužická 4","subject":"CN20260075 — klientka chce jinou konstrukti","desc":"Klientka 11.5. napsala, že nechce těžké fošny, chce lehčí vzdušné zakrytí. Čeká na revizi nabídky.","bar":"orange","tagColor":"orange","tagText":"🟠 revize CN"}]},{"id":"subdodavatele","emoji":"🔧","title":"Subdodavatelé","entries":[{"id":"postolka_elektro","name":"Poštolka — 3× elektro kalkulace","subject":"Novodvorská + Dandova vícepráce + Moskevská vícepráce","desc":"18.5. ráno poslal 3 kalkulace najednou. Žádná viditelná odpověď. Zkontrolovat a okomentovat — hlavně vícepráce Moskevská a Dandova.","bar":"orange","tagColor":"orange","tagText":"🟠 zkontrolovat"},{"id":"ds_podlahy","name":"DS Podlahy (Šimon)","subject":"Termíny V Předpolí + Slévačská + Moskevská","desc":"Šimon 19.5. poslal tabulku termínů ale píše, že neví m² a neumí propisovací tabulku. Odpovědět s m² pro jednotlivé akce.","bar":"orange","tagColor":"orange","tagText":"🟠 doplnit m²"},{"id":"erkado_saarova","name":"ERKADO — Šaarová dveře","subject":"Zakázka 12604695 — stav ke 19.5.","desc":"Automatický stav zakázky z 19.5. Dveře na cestě? Sledovat dodání.","bar":"yellow","tagColor":"yellow","tagText":"🟡 sledovat"},{"id":"tilestav_melnyk","name":"Tilestav (Melnyk)","subject":"Faktura — koupelna Phov, Moskevská 23","desc":"20.5. zaslal vyúčtování za koupelnu. Odsouhlasit a zaplatit.","bar":"orange","tagColor":"orange","tagText":"🟠 schválit"}]},{"id":"zasilky","emoji":"📦","title":"Zásilky a doručení","entries":[{"id":"ppl","name":"PPL ParcelShop","subject":"Zásilka čeká ve výdejním místě","desc":"Zásilka uložena od 7. 5. 2026 — již 14 dní! Vyzvedněte co nejdříve.","bar":"red","tagColor":"red","tagText":"🔴 14 dní!"},{"id":"alzabox","name":"AlzaBox — obj. 597096512","subject":"Připraveno k vyzvednutí v AlzaBoxu P4 Kunratice","desc":"Dorazilo 20.5. — připraveno v AlzaBoxu Krále Vladislava, Praha 4-Kunratice.","bar":"orange","tagColor":"orange","tagText":"🟠 vyzvednout"},{"id":"hornbach_rezervace","name":"Hornbach — RA9048121752","subject":"Rezervace připravena k vyzvednutí, Čestlice","desc":"Připraveno k vyzvednutí v prodejně Hornbach Čestlice / Praha. Objednáno 19.5.","bar":"yellow","tagColor":"yellow","tagText":"🟡 vyzvednout"}]},{"id":"faktury","emoji":"💰","title":"Faktury a platby","entries":[{"id":"tilestav_faktura","name":"Tilestav — faktura Moskevská","subject":"Vyúčtování koupelna Phov, Moskevská 23","desc":"Přišla 20.5. — nová faktura od subdodavatele. Zkontrolovat a odsouhlasit před úhradou.","bar":"orange","tagColor":"orange","tagText":"🟠 ke schválení"},{"id":"osmancik","name":"Osmančík — živnostenský list","subject":"Faktura za garantování živnosti","desc":"Faktura za další období garantování živnostenského oprávnění (Provádění staveb). Zkontrolovat a uhradit.","bar":"yellow","tagColor":"yellow","tagText":"🟡 uhradit"},{"id":"o2","name":"O2","subject":"Vyúčtování za květen 2026","desc":"2 096,91 Kč za telefonní služby. Částečně uhrazeno — zkontrolovat zůstatek.","bar":"orange","tagColor":"orange","tagText":"2 096,91 Kč"},{"id":"ptacek_faktury","name":"Ptáček","subject":"Faktury F3052614424 + F3032614985","desc":"Dvě faktury od Ptáčka — v příloze emailů. Zkontrolovat a zaevidovat.","bar":"grey","tagColor":"grey","tagText":"Evidovat"},{"id":"svet_svitidel_f","name":"Svět svítidel","subject":"Faktury 94165939 a 94151340","desc":"Dvě faktury za svítidla — uhrazeno.","bar":"green","tagColor":"green","tagText":"✓ Uhrazeno"},{"id":"wedos","name":"Wedos","subject":"Faktura — webhosting malovaninatirani.cz","desc":"2 904 Kč za webhosting 2026–2027. Platba přijata 14.5.","bar":"grey","tagColor":"grey","tagText":"✓ Zaplaceno"}]}]};
+// CONTENT_DATA_END
+
+// ── Konfigurace (záložní fetch pro případ že inline data chybí) ───────────
+var NOTES_BLOB = 'https://vrana-dashboard.netlify.app/api/notes';
+var NOTES_BLOB_DIRECT = 'https://jsonblob.com/api/jsonBlob/019e44f8-74e3-701b-9b2c-63a1736d3b17';
+function p(url){ return url; }
+var LOCAL_NOTES  = 'vrana_history_cache';
+var sharedNotes  = [];
+var resolvedState = {};
+var showResolved  = false;
+var currentPrompt = '';
+
+// ── Helpers ───────────────────────────────────────────
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function formatDateLabel(dateStr) {
+  var d = new Date(dateStr+'T00:00:00');
+  var days=['neděle','pondělí','úterý','středa','čtvrtek','pátek','sobota'];
+  var months=['1.','2.','3.','4.','5.','6.','7.','8.','9.','10.','11.','12.'];
+  var today=new Date().toISOString().split('T')[0];
+  var yesterday=new Date(Date.now()-864e5).toISOString().split('T')[0];
+  if(dateStr===today) return 'Dnes';
+  if(dateStr===yesterday) return 'Včera';
+  return days[d.getDay()]+' '+d.getDate()+'. '+months[d.getMonth()];
+}
+
+// ── Render obsahu z JSONBlob ──────────────────────────
+function renderContent(data) {
+  // Header datum
+  document.getElementById('datePill').textContent = data.dateLabel || '';
+  document.getElementById('greetingSub').textContent = 'Ranní přehled emailů — ' + (data.dateLabel || '');
+
+  // Priority box
+  var prows = (data.priorities||[]).map(function(p,i){
+    return '<div class="prow"><span class="pnum">'+(i+1)+'</span><span>'+escHtml(p.text)+'</span></div>';
+  }).join('');
+  document.getElementById('priorityBox').className = 'pbox';
+  document.getElementById('priorityBox').innerHTML =
+    '<div class="pbox-label">✅ Co dnes vyřešit jako první</div>' + (prows || '<div class="prow"><span style="color:#666">Žádné priority</span></div>');
+
+  // Sekce
+  var html = '';
+  (data.sections||[]).forEach(function(sec) {
+    var entries = (sec.entries||[]).filter(function(e){ return e && e.name; });
+    html += '<div class="section" id="sec-'+escHtml(sec.id)+'">';
+    html += '<div class="sec-head">';
+    html += '<span class="sec-emoji">'+escHtml(sec.emoji||'')+'</span>';
+    html += '<span class="sec-title">'+escHtml(sec.title)+'</span>';
+    html += '<span class="sec-count">'+entries.length+'</span>';
+    html += '</div><div class="sec-divider"></div>';
+    if(!entries.length) {
+      html += '<div class="empty-sec">Žádné emaily v této kategorii ✓</div>';
+    } else {
+      entries.forEach(function(e) {
+        var cardKey = 'card_' + (e.id || e.name.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,''));
+        html += '<div class="entry" data-key="'+escHtml(cardKey)+'" data-name="'+escHtml(e.name)+'" data-subject="'+escHtml(e.subject||'')+'" data-desc="'+escHtml(e.desc||'')+'">';
+        html += '<div class="entry-bar bar-'+escHtml(e.bar||'grey')+'"></div>';
+        html += '<div class="entry-top">';
+        html += '<div><div class="entry-name">'+escHtml(e.name)+'</div><div class="entry-subject">'+escHtml(e.subject||'')+'</div></div>';
+        html += '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">';
+        html += '<span class="tag tag-'+escHtml(e.tagColor||'grey')+'">'+escHtml(e.tagText||'')+'</span>';
+        html += '<span class="resolved-badge">✓ Vyřešeno</span>';
+        html += '</div></div>';
+        html += '<div class="entry-desc">'+escHtml(e.desc||'')+'</div>';
+        html += '</div>';
+      });
+    }
+    html += '</div>';
+  });
+  document.getElementById('sectionsContainer').innerHTML = html;
+
+  // Inicializuj poznámky a resolved tlačítka pro každou kartu
+  document.querySelectorAll('.entry[data-key]').forEach(function(entry) {
+    initEntryControls(entry);
+  });
+  applyResolvedState();
+}
+
+// ── Poznámky + Vyřešeno na kartě ──────────────────────
+function initEntryControls(entry) {
+  var cardKey = entry.getAttribute('data-key');
+  var noteKey = 'note_' + cardKey;
+  var savedVal = localStorage.getItem(noteKey) || '';
+
+  // Resolve button
+  var resolveBtn = document.createElement('button');
+  resolveBtn.className = 'btn-resolve';
+  resolveBtn.textContent = '✓ Vyřešeno';
+  resolveBtn.onclick = function() {
+    var isResolved = entry.classList.contains('resolved');
+    markResolved(cardKey, entry.getAttribute('data-name'), isResolved);
+  };
+  entry.appendChild(resolveBtn);
+
+  // Note wrap
+  var wrap = document.createElement('div'); wrap.className = 'note-wrap';
+  var header = document.createElement('div'); header.className = 'note-header';
+  header.innerHTML = '<span style="font-size:13px">📝</span> Poznámka';
+  wrap.appendChild(header);
+
+  var ta = document.createElement('textarea');
+  ta.className = 'note-textarea' + (savedVal ? ' has-value' : '');
+  ta.placeholder = 'Napiš poznámku nebo instrukci pro Claudu…';
+  ta.value = savedVal; ta.rows = 1;
+  wrap.appendChild(ta);
+
+  var footer = document.createElement('div'); footer.className = 'note-footer';
+  var savedSpan = document.createElement('span'); savedSpan.className = 'note-saved'; savedSpan.textContent = '✓ Uloženo';
+  footer.appendChild(savedSpan);
+  var sendBtn = document.createElement('button'); sendBtn.type = 'button';
+  sendBtn.className = 'note-send'; sendBtn.textContent = '↗ Poslat Claudovi';
+  footer.appendChild(sendBtn);
+  wrap.appendChild(footer); entry.appendChild(wrap);
+
+  function autoResize() { ta.style.height='auto'; ta.style.height=ta.scrollHeight+'px'; }
+  if(savedVal) autoResize();
+
+  var saveTimer;
+  ta.addEventListener('input', function() {
+    autoResize(); ta.classList.toggle('has-value', ta.value.length>0);
+    clearTimeout(saveTimer); savedSpan.classList.remove('show');
+    saveTimer = setTimeout(function(){
+      localStorage.setItem(noteKey, ta.value);
+      savedSpan.classList.add('show');
+      setTimeout(function(){ savedSpan.classList.remove('show'); }, 2000);
+    }, 600);
+  });
+
+  sendBtn.onclick = function() {
+    var text = ta.value.trim();
+    var name = entry.getAttribute('data-name')||'';
+    var subject = entry.getAttribute('data-subject')||'';
+    var desc = entry.getAttribute('data-desc')||'';
+    if(text) addToHistory(name, subject, text);
+    var prompt = (name ? 'Ohledně '+name+(subject?' ('+subject+')':'')+
+      ':\nKontext: '+desc+'\n\n' : '') + (text||'Co mám udělat?') + getRecentHistoryText();
+    if(typeof sendPrompt==='function'){ sendPrompt(prompt); return; }
+    openModal(prompt);
+  };
+}
+
+// ── Vyřešeno ─────────────────────────────────────────
+function applyResolvedState() {
+  document.querySelectorAll('.entry[data-key]').forEach(function(el) {
+    var key = el.getAttribute('data-key');
+    var isRes = !!resolvedState[key];
+    el.classList.toggle('resolved', isRes);
+    el.style.display = (!showResolved && isRes) ? 'none' : '';
+    var badge = el.querySelector('.resolved-badge');
+    if(badge && isRes && resolvedState[key].at) badge.textContent = '✓ Vyřešeno '+resolvedState[key].at;
+    var btn = el.querySelector('.btn-resolve');
+    if(btn) btn.textContent = isRes ? '↩ Vrátit' : '✓ Vyřešeno';
+  });
+}
+
+function toggleResolved() {
+  showResolved = !showResolved;
+  document.getElementById('toggleResolved').textContent = showResolved ? '🙈 Skrýt vyřešené' : '👁 Zobrazit vyřešené';
+  applyResolvedState();
+}
+
+async function markResolved(cardKey, entryName, currentlyResolved) {
+  var now = new Date();
+  var t = now.toISOString().split('T')[0]+' '+now.toTimeString().slice(0,5);
+  if(currentlyResolved) { delete resolvedState[cardKey]; addToHistory(entryName,'','↩ Vráceno zpět k řešení'); }
+  else { resolvedState[cardKey]={at:t}; addToHistory(entryName,'','✓ Označeno jako vyřešeno'); }
+  applyResolvedState();
+  try {
+    var resp = await fetch(p(NOTES_BLOB),{headers:{'Accept':'application/json'}});
+    var data = await resp.json();
+    data.resolved = resolvedState;
+    await fetch(p(NOTES_BLOB),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+  } catch(e){}
+}
+
+// ── Sdílená historie ──────────────────────────────────
+async function fetchNotesBlob() {
+  var urls = [NOTES_BLOB, NOTES_BLOB_DIRECT];
+  for (var i = 0; i < urls.length; i++) {
+    try {
+      var resp = await fetch(urls[i], {headers:{'Accept':'application/json'}});
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      var data = await resp.json();
+      sharedNotes = data.notes || [];
+      resolvedState = data.resolved || {};
+      localStorage.setItem(LOCAL_NOTES, JSON.stringify(sharedNotes));
+      break;
+    } catch(e) {
+      if (i === urls.length - 1) {
+        try { sharedNotes=JSON.parse(localStorage.getItem(LOCAL_NOTES)||'[]'); } catch(e2){}
+      }
+    }
+  }
+  renderHistory();
+  applyResolvedState();
+}
+
+async function addToHistory(name, subject, note) {
+  var now=new Date();
+  sharedNotes.unshift({date:now.toISOString().split('T')[0],time:now.toTimeString().slice(0,5),entryName:name||'',subject:subject||'',note:note});
+  var cutStr=new Date(Date.now()-90*864e5).toISOString().split('T')[0];
+  sharedNotes=sharedNotes.filter(function(h){return h.date>=cutStr;}).slice(0,300);
+  localStorage.setItem(LOCAL_NOTES,JSON.stringify(sharedNotes));
+  renderHistory();
+  try {
+    var resp=await fetch(p(NOTES_BLOB),{headers:{'Accept':'application/json'}});
+    var data=await resp.json();
+    data.notes=sharedNotes;
+    await fetch(p(NOTES_BLOB),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+  } catch(e){}
+}
+
+function getRecentHistoryText() {
+  var cutStr=new Date(Date.now()-7*864e5).toISOString().split('T')[0];
+  var recent=sharedNotes.filter(function(h){return h.date>=cutStr&&h.note;}).slice(0,20);
+  if(!recent.length) return '';
+  return '\n\n---\nHistorie posledních dní:\n'+recent.map(function(h){
+    return '['+h.date+' '+h.time+'] '+(h.entryName?h.entryName+': ':'')+h.note;
+  }).join('\n');
+}
+
+function renderHistory() {
+  var c=document.getElementById('historyContainer'); if(!c) return;
+  var cutStr=new Date(Date.now()-7*864e5).toISOString().split('T')[0];
+  var recent=sharedNotes.filter(function(h){return h.date>=cutStr;});
+  if(!recent.length){c.innerHTML='<div class="history-empty">Zatím žádné záznamy. Po prvním odeslání poznámky se zobrazí zde všem.</div>';return;}
+  var byDate={},dateOrder=[];
+  recent.forEach(function(h){if(!byDate[h.date]){byDate[h.date]=[];dateOrder.push(h.date);}byDate[h.date].push(h);});
+  dateOrder=dateOrder.filter(function(v,i,a){return a.indexOf(v)===i;});
+  var html='';
+  dateOrder.forEach(function(date){
+    html+='<div class="history-day"><div class="history-day-label">'+formatDateLabel(date)+'</div>';
+    byDate[date].forEach(function(h){
+      html+='<div class="history-entry"><div class="history-body">';
+      if(h.entryName) html+='<div class="history-name">'+escHtml(h.entryName)+(h.subject?' · '+escHtml(h.subject):'')+' </div>';
+      html+='<div class="history-note">'+escHtml(h.note)+'</div></div>';
+      html+='<div class="history-time">'+escHtml(h.time)+'</div></div>';
+    });
+    html+='</div>';
+  });
+  c.innerHTML=html;
+}
+
+// ── Modal ─────────────────────────────────────────────
+function openModal(text) {
+  currentPrompt=text;
+  document.getElementById('promptText').value=text;
+  document.getElementById('promptModal').classList.add('open');
+  document.getElementById('btnCopy').textContent='📋 Zkopírovat';
+  document.getElementById('btnCopy').classList.remove('copied');
+  setTimeout(function(){document.getElementById('promptText').select();},100);
+}
+function closeModal(){document.getElementById('promptModal').classList.remove('open');}
+function copyPrompt(){
+  currentPrompt=document.getElementById('promptText').value;
+  navigator.clipboard.writeText(currentPrompt).then(function(){
+    var btn=document.getElementById('btnCopy');
+    btn.textContent='✓ Zkopírováno!';btn.classList.add('copied');
+  });
+}
+function openClaude(){copyPrompt();window.open('https://claude.ai/new','_blank');}
+document.getElementById('promptModal').addEventListener('click',function(e){if(e.target===this)closeModal();});
+
+// ── Plovoucí chat ─────────────────────────────────────
+function toggleChat(){
+  var p=document.getElementById('chatPanel');
+  var open=p.classList.toggle('open');
+  if(open) setTimeout(function(){document.getElementById('chatInput').focus();},150);
+}
+function getDashboardContext(){
+  var lines=[];
+  document.querySelectorAll('.entry:not(.resolved)').forEach(function(el){
+    var n=el.getAttribute('data-name'); var s=el.getAttribute('data-subject'); var d=el.getAttribute('data-desc');
+    if(n) lines.push('• '+n+(s?' — '+s:'')+(d?': '+d.slice(0,100):''));
+  });
+  return lines.length?'\n\nOtevřené položky:\n'+lines.join('\n'):'';
+}
+function sendChatPrompt(){
+  var text=document.getElementById('chatInput').value.trim();
+  if(!text) return;
+  var full='Jsi asistent firmy Rekonstrukce Vrána.'+getDashboardContext()+getRecentHistoryText()+'\n\n---\nDotaz: '+text;
+  if(typeof sendPrompt==='function'){sendPrompt(full);return;}
+  openModal(full);
+}
+
+// ── Init ──────────────────────────────────────────────
+async function init() {
+  var data = null;
+
+  // 1) Inline data (task je aktualizuje každé ráno — vždy dostupné, bez fetch)
+  if (CONTENT_DATA) {
+    data = CONTENT_DATA;
+  } else {
+    // 2) Fallback fetch — zkus Netlify proxy a pak přímý JSONBlob
+    var urls = [
+      'https://vrana-dashboard.netlify.app/api/content',
+      'https://jsonblob.com/api/jsonBlob/019e497e-cec7-71d1-9412-04e1dd46c4a3'
+    ];
+    for (var i = 0; i < urls.length; i++) {
+      try {
+        var resp = await fetch(urls[i], {headers:{'Accept':'application/json'}});
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        data = await resp.json();
+        break;
+      } catch(e) {}
+    }
+  }
+
+  if (data) {
+    renderContent(data);
+  } else {
+    document.getElementById('priorityBox').innerHTML =
+      '<div style="color:#dc2626;padding:10px;font-size:13px">' +
+      '⚠️ Data nejsou dostupná — ranní task ještě neproběhl nebo nastal problém.<br><br>' +
+      '<button onclick="init()" style="background:#111;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px">🔄 Zkusit znovu</button>' +
+      '</div>';
+  }
+  fetchNotesBlob();
+}
+
+init();
+</script>
+</body>
+</html>
