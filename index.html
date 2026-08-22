@@ -132,9 +132,43 @@
   .history-empty { font-size: 13px; color: #ccc; font-style: italic; padding: 10px 0; }
 
   .loading { text-align: center; padding: 40px; color: #ccc; font-size: 14px; }
+
+  /* ── Přihlašovací brána ─────────────────────────────── */
+  #authGate{position:fixed;inset:0;background:#0f1115;display:none;align-items:center;justify-content:center;z-index:9999;padding:20px}
+  #authGate .box{background:#1a1d23;border:1px solid #2a2f38;border-radius:16px;padding:28px 24px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.55)}
+  #authGate .mark{width:40px;height:40px;border-radius:11px;background:#f2a91f;color:#15171c;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:19px;margin:0 auto 14px}
+  #authGate h2{color:#fff;font-size:17px;text-align:center;margin:0 0 4px;font-weight:700}
+  #authGate .sub{color:#8a93a0;font-size:12.5px;text-align:center;margin:0 0 18px}
+  #authGate label{display:block;color:#8a93a0;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin:13px 0 5px}
+  #authGate input{width:100%;background:#0f1115;border:1px solid #2a2f38;border-radius:9px;padding:11px 13px;color:#fff;font-size:14px;font-family:inherit;box-sizing:border-box}
+  #authGate input:focus{outline:none;border-color:#f2a91f}
+  #authGate button{width:100%;margin-top:20px;background:#f2a91f;color:#15171c;border:none;border-radius:9px;padding:12px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit}
+  #authGate button:disabled{opacity:.55;cursor:default}
+  #authErr{color:#f87171;font-size:12.5px;margin-top:13px;text-align:center;display:none;line-height:1.4}
+  #signOutBtn{background:none;border:1px solid rgba(255,255,255,.18);color:inherit;opacity:.62;border-radius:7px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:inherit;margin-left:9px}
+  #signOutBtn:hover{opacity:1}
 </style>
 </head>
 <body>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
+<div id="authGate">
+  <div class="box">
+    <div class="mark">V</div>
+    <h2>Denní report</h2>
+    <div class="sub">Rekonstrukce Vrána — přihlaste se</div>
+    <label>E-mail</label>
+    <input type="email" id="authEmail" autocomplete="username">
+    <label>Heslo</label>
+    <input type="password" id="authPass" autocomplete="current-password">
+    <button id="authBtn" onclick="doAuthLogin()">Přihlásit</button>
+    <div id="authErr"></div>
+  </div>
+</div>
+
 
 <div class="header">
   <div class="logo">
@@ -142,6 +176,7 @@
     Rekonstrukce Vrána
   </div>
   <div class="date-pill" id="datePill">načítám…</div>
+  <button id="signOutBtn" onclick="doAuthLogout()">Odhlásit</button>
 </div>
 
 <div class="page">
@@ -199,25 +234,62 @@
 <script>
 // ── Inline data (aktualizuje scheduled task — NEMĚNIT RUČNĚ) ─────────────
 // CONTENT_DATA_START
-var CONTENT_DATA = {"generatedAt":"2026-08-22 08:00","dateLabel":"sobota 22. 8. 2026","priorities":[{"text":"Josef Zima (Krškova 783/15) — urguje CN + plánek už od 19. 8., stále neodesláno. Poslat dnes."},{"text":"Věra Hrádecká (Písnice) — dodat revizní zprávu elektro a potvrdit termín 1. kontrolního dne."},{"text":"DEK: Caparol Malerit se míchá jen na Stodůlkách — rozhodnout (Stodůlky vs. Jisacolor, kde už míchají)."},{"text":"Followup starých CN bez odezvy: Skalová CN20260092 (22 dní) a Šašek CN20260053 (36 dní)."},{"text":"Odpovědět na 4 nové poptávky z webu: Havelková, Tomášek, Navrátil, Merzová."}],"sections":[{"id":"zakaznici","emoji":"👷","title":"Zákazníci — aktivní zakázky","entries":[{"id":"hradecka","name":"Věra Hrádecká — Písnice (CN20260088)","subject":"Změnový list ZL01 potvrzen","desc":"ZL01 potvrdila 21. 8. Čeká na 2 věci: předání revizní zprávy elektro a termín prvního kontrolního dne. Koncové prvky vybrány ZONI matně bílá — hlídat čistotu rámečků a ochranu vchodových dveří.","bar":"orange","tagColor":"orange","tagText":"🟠 odpovědět"},{"id":"tovarkova","name":"Renata Továrková","subject":"Harmonogram — uvedení kotle do provozu","desc":"Potvrdila termín zapojení kotle na úterý 8. 9., 8:00–9:30, a přeje si účast Vaši nebo p. Falata. Do 21. 8. měl být kotel + radiátory ISAN napuštěné a natlakované — ověřit stav.","bar":"yellow","tagColor":"yellow","tagText":"🟡 potvrdit"},{"id":"slansky","name":"Jan Slánský — Bělčická 2825/12 (CN20260093)","subject":"Zárubeň, truhlář, podklady pro SVJ","desc":"Včera 22. 8. odeslána opravená verze podkladů pro SVJ. Domluveno: 1× nová ocelová zárubeň, u zbylých 4 dveří výměna pouze křídel. Platby 20/20/40/20. Čeká se na jeho reakci a podpis SoD.","bar":"green","tagColor":"green","tagText":"🟢 čeká na klienta"},{"id":"kozak","name":"Štěpán Kozák — V Dolině 1515/1B","subject":"Stmívače ABB ZONI, zrcadla, krabice","desc":"Stmívače ZONI potvrzeny (2× strojek + kryty, montáž 590 Kč/ks). Zrcadla N52 a N47 objednána. Klient si měl v pátek 21. 8. po 17:30 přenést krabice na terasu — ověřit, že proběhlo bez problému.","bar":"blue","tagColor":"blue","tagText":"🔵 běží"},{"id":"martinec","name":"Zdeno Martinec — Hostivař (CN20260086)","subject":"Katalog dodávky materiálu + truhlářské sestavy","desc":"21. 8. odeslán katalog materiálu, nabídka truhlářských sestav a aktualizace rozpočtu (dveře SAPELI po zaměření). Od Kněžka (K Prostor) dorazily rozpočty na nábytek část 1 i 2 — jeden rozpočet ještě chybí doposlat.","bar":"blue","tagColor":"blue","tagText":"🔵 čeká na klienta"},{"id":"liedermannova","name":"Kamila Liedermannová — Nad Kajetánkou 12 (CN20260094)","subject":"Nabídku přijala, řeší se postup","desc":"Má o nabídku zájem. Předběžně rezervován termín zahájení 7. 9. 2026, realizace 10 týdnů. Potřeba dotáhnout smlouvu o dílo, aby se termín potvrdil — 7. 9. je za 2 týdny.","bar":"orange","tagColor":"orange","tagText":"🟠 smlouva"},{"id":"monkeys","name":"Zuzana Svátková — Monkeys Gym","subject":"Výmalba 4 poboček — celkové shrnutí","desc":"20. 8. poslala shrnutí letošní výmalby všech 4 poboček (poslední Juklík). Nezodpovězeno 2 dny — vhodné odpovědět a případně zaúčtovat/uzavřít.","bar":"orange","tagColor":"orange","tagText":"🟠 odpovědět"},{"id":"kristan","name":"Křišťán — K Vrbě 535/18 (CN20260095)","subject":"Výmalba dětského pokoje a chodby","desc":"Nabídka odsouhlasena, termín pondělí 7. 9., malíř v 8:00, platba hotově, bez zálohy (stálý zákazník). Nic není potřeba, jen zanést do plánu.","bar":"grey","tagColor":"grey","tagText":"⚪ vyřešeno"},{"id":"nadvornikova","name":"Dagmar Nádvorníková — Horolezecká","subject":"Poděkování za výmalbu","desc":"20. 8. poslala velmi pozitivní zpětnou vazbu. Ideální adept na žádost o Google recenzi.","bar":"grey","tagColor":"grey","tagText":"⚪ recenze?"}]},{"id":"nabidky","emoji":"📋","title":"Naše nabídky","entries":[{"id":"zima","name":"Josef Zima — Krškova 783/15, Praha 5","subject":"Urguje cenovou nabídku a plánek","desc":"Píše 19. 8., že mu po zaměření nedorazila CN ani plánek. Připomíná se — 3 dny bez reakce. Nejvyšší priorita dneška.","bar":"red","tagColor":"red","tagText":"🔴 DNES"},{"id":"skalova","name":"Skalová — Bachova 1591/6 (CN20260092)","subject":"CN odeslána 31. 7. — bez odpovědi","desc":"Kompletní rekonstrukce bytu, nabídka odešla před 22 dny a klientka se neozvala. Zavolat nebo poslat followup.","bar":"red","tagColor":"red","tagText":"🔴 followup"},{"id":"sasek","name":"Šašek — Machuldova 595/8 (CN20260053)","subject":"Aktualizovaná CN z 17. 7. — bez odpovědi","desc":"Aktualizovaná nabídka po osobní schůzce, 36 dní ticho. Poštolka navíc žádá o přístup k Šašek Report.pdf na Drive.","bar":"red","tagColor":"red","tagText":"🔴 followup"},{"id":"zeman","name":"Josef Zeman — Konstantinova 1483","subject":"Poptávka: kompletní rekonstrukce bytu 64 m² vč. rozvodů","desc":"Poptávka z webu z 16. 8., 6 dní bez odpovědi. Tel. 606776185.","bar":"red","tagColor":"red","tagText":"🔴 6 dní"},{"id":"havelkova","name":"Veronika Havelková — Zdiměřická, Jižní Město","subject":"Rekonstrukce bytu 2+kk, 41,51 m²","desc":"Poptávka z 20. 8. s fotkami. Koupelna má již vyzděné jádro, představa: výměna podlah, oprava stěn. Domluvit obhlídku.","bar":"orange","tagColor":"orange","tagText":"🟠 obhlídka"},{"id":"navratil","name":"Pavel Navrátil — Úvaly u Prahy","subject":"Kompletní rekonstrukce domu, 120 m²","desc":"Poptávka z 19. 8., 3 dny bez odpovědi. Tel. 731115811. Velká zakázka — stojí za rychlou reakci.","bar":"orange","tagColor":"orange","tagText":"🟠 odpovědět"},{"id":"lukas2882","name":"Lukáš (lukas2882@seznam.cz)","subject":"Dotaz na cenu bourání — byt 2+1, 60 m²","desc":"Ptá se na odhad: oškrábání až na panel, zbourání sníženého stropu a 3 nenosných příček. Chce jen orientační cenu — rychlá odpověď.","bar":"orange","tagColor":"orange","tagText":"🟠 odhad ceny"},{"id":"merzova","name":"Iveta Merzová — Seidlova 14/479","subject":"Poptávka z webu MalováníNatírání.cz, 68 m² 2+1","desc":"Přišlo 20. 8. přes formulář malovaninatirani.cz. Tel. 739641490.","bar":"orange","tagColor":"orange","tagText":"🟠 odpovědět"},{"id":"tomasek","name":"Miroslav Tomášek — Kpt. Stránského, Praha 14","subject":"Rekonstrukce panelového bytu 3+1, 65 m²","desc":"Poptávka z webu z 21. 8. Tel. 777255185. Reagovat do 24 h.","bar":"yellow","tagColor":"yellow","tagText":"🟡 nová poptávka"},{"id":"tojslova","name":"Hana Tojšlová — Pod lipami 2563/29","subject":"Rozpracovaný rozpočet a půdorys","desc":"17. 8. jí bylo psáno o kapacitách a rozpracovaném rozpočtu. Potřeba dotáhnout finální CN, jinak nám odejde ke konkurenci.","bar":"yellow","tagColor":"yellow","tagText":"🟡 dokončit CN"},{"id":"frankova","name":"Aisha Franková — Praha, 80 m²","subject":"Nacenění rekonstrukce bytu mimo koupelny","desc":"Poptávka z 20. 8., úvodní odpověď odeslána týž den. Čeká se na její reakci / domluvení obhlídky.","bar":"blue","tagColor":"blue","tagText":"🔵 odpovězeno"},{"id":"kosikova","name":"Karolína Košíková — Praha 10","subject":"Kompletní rekonstrukce bytu na klíč","desc":"Poptávka ze 17. 8., odpověď odeslána 19. 8. Zaujaly ji reference na webu a Instagramu. Čeká se na reakci.","bar":"blue","tagColor":"blue","tagText":"🔵 odpovězeno"}]},{"id":"subdodavatele","emoji":"🔧","title":"Subdodavatelé","entries":[{"id":"dek-caparol","name":"DEK — Svitlana Hulovych","subject":"Caparol Malerit: míchárna jen Stodůlky","desc":"Ptá se, jak si přejeme dále postupovat — Caparol se míchá pouze na pobočce Stodůlky, ne v Hostivaři ani Vestci. Zároveň Jisacolor už dostal pokyn k namíchání (nabídka 26NA00091). Sjednotit, ať se nemíchá dvakrát.","bar":"orange","tagColor":"orange","tagText":"🟠 rozhodnout"},{"id":"knezek","name":"Kněžek — K Prostor (Hostivař/Martinec)","subject":"Rozpočty na nábytek, část 1 a 2","desc":"Obě části dorazily 20. a 21. 8. Sám píše, že mu ještě chybí doposlat jeden rozpočet — připomenout se, ať se dá dokončit CN20260086.","bar":"yellow","tagColor":"yellow","tagText":"🟡 urgovat zbytek"},{"id":"postolka","name":"Lukáš Poštolka (elektro)","subject":"Žádost o přístup k Šašek Report.pdf + detektor","desc":"Žádá o sdílení souboru Šašek Report.pdf na Drive — schválit. Také poslal tip na detektor vedení pro trasování rozvodů. K Hrádecké dodal materiál na hrubou: 4 300 Kč + rezerva do 5 000 Kč.","bar":"yellow","tagColor":"yellow","tagText":"🟡 schválit sdílení"},{"id":"siko-kuchyne","name":"SIKO — Ondřej Palůch","subject":"Specialista na kuchyňské linky","desc":"Šimon Bednář předal kontakt na kolegu pro kuchyně (odhad 10–20 ks ročně). Rezervovat schůzku přes jeho kalendář.","bar":"yellow","tagColor":"yellow","tagText":"🟡 objednat schůzku"},{"id":"jezl","name":"Elektro Jezl — Petr Jezl","subject":"Navázání spolupráce (elektroměry, PRE)","desc":"20. 8. odeslán email k spolupráci na byrokracii kolem osazení třífázových elektroměrů. Zatím bez odpovědi — 2 dny.","bar":"yellow","tagColor":"yellow","tagText":"🟡 čeká odpověď"},{"id":"dek-radiatory","name":"DEK — Jakub Prachař","subject":"KORADO / RADIK radiátory","desc":"Sleva srovnána na 44 % z CC na celou skupinu KORADO, objednávka RADIK potvrzena. Koratherm upraven na rozměr 1240×750×61 mm — ověřit, že nabídka dorazila.","bar":"blue","tagColor":"blue","tagText":"🔵 běží"}]},{"id":"zasilky","emoji":"📦","title":"Zásilky a doručení","entries":[{"id":"siko-sklad","name":"SIKO — objednávka 3013370822","subject":"Naskladněno, čeká na vyzvednutí","desc":"Naskladněno 20. 8., PIN kód pro samoobslužný automat v emailu. Email zatím nepřečtený — vyzvednout.","bar":"orange","tagColor":"orange","tagText":"📦 vyzvednout"},{"id":"alzabox","name":"AlzaBox — objednávka 1054577256","subject":"Připraveno v AlzaBoxu P4 Kunratice","desc":"Dorazilo dnes ráno 22. 8. do AlzaBoxu Dobronická, Praha 4. Pozor na lhůtu pro vyzvednutí.","bar":"green","tagColor":"green","tagText":"📦 dnes"},{"id":"alza-vraceni","name":"Alza — případ AVRA261910996","subject":"Odstoupení od kupní smlouvy — doručit produkt","desc":"Odstoupení zaevidováno, Alza čeká na doručení produktu do AlzaBoxu P4 Kunratice. Nutno odeslat, jinak případ propadne.","bar":"orange","tagColor":"orange","tagText":"📦 odeslat zpět"},{"id":"megabad","name":"Megabad — objednávka 81741804","subject":"GROHE Essence vestavná vana 180×80","desc":"Odesláno, předpokládané doručení od 21. 8. Faktura přiložena v emailu. Zkontrolovat, zda dorazilo a v jakém stavu.","bar":"yellow","tagColor":"yellow","tagText":"📦 ověřit doručení"},{"id":"erkado","name":"ERKADO — zakázka 12604207","subject":"Dveře jsou skladem","desc":"Od 11. 8. hlášeno jako skladem (objednávka potvrzena 19. 6.). Email nepřečtený — domluvit odvoz/dodání na stavbu.","bar":"orange","tagColor":"orange","tagText":"📦 skladem 11 dní"},{"id":"koberce","name":"Nej-Koberce.cz — objednávka 26026694","subject":"Platba přijata 21. 8.","desc":"Objednávka zaplacena, čeká se na expedici.","bar":"blue","tagColor":"blue","tagText":"🔵 zaplaceno"},{"id":"svitidla","name":"Svět-svítidel — objednávka 94516029","subject":"Zaplaceno (Kozák — žárovky)","desc":"Objednávka uhrazena 21. 8., přeposláno na fakturaci. Upozornění k expedici v emailu.","bar":"blue","tagColor":"blue","tagText":"🔵 zaplaceno"},{"id":"ikea","name":"IKEA","subject":"Rezervace potvrzena + účtenka z 21. 8.","desc":"Rezervace proběhla úspěšně, nákup z 21. 8. zaúčtován. Účtenka v příloze pro fakturaci.","bar":"grey","tagColor":"grey","tagText":"⚪ hotovo"}]},{"id":"faktury","emoji":"💰","title":"Faktury a platby","entries":[{"id":"servis-oken","name":"Servis a opravy oken — FA 1620726","subject":"Po splatnosti","desc":"17. 8. přeposláno na fakturaci s poznámkou „Prosím uhradit, už jsme po splatnosti“. Ověřit, zda byla úhrada provedena.","bar":"red","tagColor":"red","tagText":"🔴 po splatnosti"},{"id":"vilimek","name":"Obklady Vilímek — FA 26FV3344","subject":"Nová faktura z 19. 8.","desc":"Přišla faktura včetně ISDOC. Zkontrolovat proti výkazu prací a zařadit k úhradě.","bar":"yellow","tagColor":"yellow","tagText":"🟡 k úhradě"},{"id":"senesi","name":"Senesi — FA 26310838 (11 485 Kč)","subject":"Zakázka Kozák","desc":"Přeposláno na fakturaci 19. 8. k úhradě do splatnosti.","bar":"yellow","tagColor":"yellow","tagText":"🟡 k úhradě"},{"id":"demos","name":"Démos trade — FV26-0121113308","subject":"Daňový doklad z 19. 8.","desc":"Faktura za odebrané zboží, VS 2261312827. Zařadit do plateb.","bar":"yellow","tagColor":"yellow","tagText":"🟡 k úhradě"},{"id":"cooltainers","name":"COOLTAINERS — FA 260232657","subject":"Storno domluveno","desc":"Sklad Průmyslová vyklizen, pronájem na další období nepotřebujeme. Petra Filarová potvrdila, že fakturu nechá stornovat. Zámek nastaven na 0000. Ověřit doručení dobropisu.","bar":"blue","tagColor":"blue","tagText":"🔵 storno"},{"id":"hastex","name":"Hastex — objednávka 42181","subject":"Čeká se na konečnou fakturu","desc":"21. 8. odeslána žádost o zaslání konečné faktury k uhrazené záloze.","bar":"blue","tagColor":"blue","tagText":"🔵 čeká"}]},{"id":"ostatni","emoji":"📬","title":"Ostatní","entries":[{"id":"technikbox","name":"Technikbox — zakázka 0000011135","subject":"Naplánování návštěvy — uvedení kotle do provozu","desc":"Adresa Stupkova 9, Holešovice. Souvisí s termínem 8. 9. u Továrkové — zkontrolovat, že se termíny nekříží.","bar":"yellow","tagColor":"yellow","tagText":"🟡 ověřit termín"},{"id":"datovka","name":"Datová schránka","subject":"Nová systémová zpráva — změna adresy DS","desc":"Důležité oznámení o změně adresy Datových schránek a automatickém přesměrování. Přečíst, ať nepřijdeme o doručení.","bar":"yellow","tagColor":"yellow","tagText":"🟡 přečíst"},{"id":"firmycz","name":"Firmy.cz","subject":"Expirace nabídek na profilu","desc":"Několik nabídek (rekonstrukce bytu, koupelny, chaty, atypické kuchyně) je 6–12 měsíců beze změny a blíží se automatické prodloužení / expirace. Vhodná chvíle je aktualizovat.","bar":"blue","tagColor":"blue","tagText":"🔵 marketing"},{"id":"superrozpocet","name":"SuperRozpočet.cz","subject":"Nabídka externího rozpočtáře","desc":"Navazují na telefonát — nabízejí přípravu položkových rozpočtů a oceňování slepých výkazů. K posouzení, případně smazat.","bar":"grey","tagColor":"grey","tagText":"⚪ k posouzení"},{"id":"certifikat","name":"Tomáš Vrána","subject":"Certifikát Rekonstrukce Vrána","desc":"Přeposlán certifikát od p. Muchy, potvrzeno 20. 8. Uložit do firemních dokumentů.","bar":"grey","tagColor":"grey","tagText":"⚪ archiv"}]}]};
+// Data se sem UŽ NEVKLÁDAJÍ. Stránka je veřejná na GitHub Pages, takže
+// cokoliv tu napsaného by si přečetl kdokoliv na internetu. Report si
+// data natáhne z Firestore až po přihlášení. (změna 22. 8. 2026)
+var CONTENT_DATA = null;
 // CONTENT_DATA_END
 
-// ── Konfigurace — Firestore (Firebase projekt vrana-denik) ────────────────
-var FS_PROJECT = 'vrana-denik'; // ⚠️ ověř přesné Project ID ve Firebase konzoli (Nastavení projektu)
-var FS_BASE = 'https://firestore.googleapis.com/v1/projects/'+FS_PROJECT+'/databases/(default)/documents/dashboard/';
+// ── Firebase (projekt vrana-denik) ────────────────────────────────────────
+// Stejné přihlášení jako do Deníku staveb. Data se čtou až po přihlášení,
+// takže ve veřejné stránce nezůstává nic — apiKey je jen identifikátor
+// projektu, ne heslo, a bez účtu s ním nikdo nic nesvede.
+var FB_CONFIG = {
+  apiKey: "AIzaSyB9bSVxEovPsOehpXvn5BfK1F-GLGwP3W0",
+  authDomain: "vrana-denik.firebaseapp.com",
+  projectId: "vrana-denik",
+  storageBucket: "vrana-denik.firebasestorage.app",
+  messagingSenderId: "117132073301",
+  appId: "1:117132073301:web:29d6f74c37a5794154f7dc"
+};
+firebase.initializeApp(FB_CONFIG);
+var fbAuth = firebase.auth();
+var fbDb   = firebase.firestore();
+
 async function fsRead(doc){
-  var resp = await fetch(FS_BASE+doc);
-  if(!resp.ok) throw new Error('HTTP '+resp.status);
-  var d = await resp.json();
-  return JSON.parse(d.fields.json.stringValue);
+  var snap = await fbDb.collection('dashboard').doc(doc).get();
+  if(!snap.exists) throw new Error('dokument ' + doc + ' neexistuje');
+  return JSON.parse(snap.data().json);
 }
 async function fsWriteNotes(obj){
-  await fetch(FS_BASE+'notes?updateMask.fieldPaths=json&updateMask.fieldPaths=updated',{
-    method:'PATCH',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({fields:{json:{stringValue:JSON.stringify(obj)},updated:{stringValue:new Date().toISOString()}}})
-  });
+  await fbDb.collection('dashboard').doc('notes').set({
+    json: JSON.stringify(obj),
+    updated: new Date().toISOString()
+  }, { merge: true });
 }
+
+// ── Přihlašovací brána ────────────────────────────────────────────────────
+function authErr(msg){
+  var e = document.getElementById('authErr');
+  e.textContent = msg; e.style.display = 'block';
+}
+async function doAuthLogin(){
+  var b  = document.getElementById('authBtn');
+  var em = document.getElementById('authEmail').value.trim();
+  var pw = document.getElementById('authPass').value;
+  if(!em || !pw){ authErr('Vyplňte e-mail i heslo.'); return; }
+  b.disabled = true; b.textContent = 'Přihlašuji…';
+  try {
+    await fbAuth.signInWithEmailAndPassword(em, pw);
+  } catch(e){
+    authErr('Přihlášení se nepodařilo. Zkontrolujte e-mail a heslo.');
+    b.disabled = false; b.textContent = 'Přihlásit';
+  }
+}
+function doAuthLogout(){
+  fbAuth.signOut().then(function(){ location.reload(); });
+}
+
 var LOCAL_NOTES  = 'vrana_history_cache';
 var sharedNotes  = [];
 var resolvedState = {};
@@ -514,7 +586,25 @@ async function init() {
   fetchNotesBlob();
 }
 
-init();
+// ── Start: nejdřív přihlášení, teprve pak data ────────────────────────────
+document.getElementById('authPass').addEventListener('keydown', function(e){
+  if(e.key === 'Enter') doAuthLogin();
+});
+document.getElementById('authEmail').addEventListener('keydown', function(e){
+  if(e.key === 'Enter') document.getElementById('authPass').focus();
+});
+
+fbAuth.onAuthStateChanged(function(user){
+  var gate = document.getElementById('authGate');
+  if(user){
+    gate.style.display = 'none';
+    init();
+  } else {
+    gate.style.display = 'flex';
+    document.getElementById('authBtn').disabled = false;
+    document.getElementById('authBtn').textContent = 'Přihlásit';
+  }
+});
 </script>
 </body>
 </html>
